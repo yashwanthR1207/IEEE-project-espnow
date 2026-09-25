@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GRIDMESH CONTROL CENTER</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Socket.io -->
+    <script src="/socket.io/socket.io.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bgLight: '#f8fafc',
+                        textDark: '#2d3748',
+                        textMuted: '#718096',
+                        sidebarBg: '#0f172a',
+                        brand: {
+                            cyan: '#06b6d4',
+                            green: '#10b981',
+                            amber: '#f59e0b',
+                            red: '#ef4444',
+                            blue: '#3b82f6'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    boxShadow: {
+                        neo: '0 4px 20px rgba(0, 0, 0, 0.05)',
+                        neoHover: '0 6px 24px rgba(0, 0, 0, 0.08)',
+                        neoInset: 'none',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- External CSS -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="min-h-screen flex p-4 md:p-6 lg:p-8 box-border gap-8">
+
+
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 flex flex-col h-[calc(100vh-4rem)]">
+        
+        <!-- HEADER -->
+        <header class="flex justify-between items-start mb-8 w-full animate-entrance delay-100">
+            <div>
+                <h1 class="text-4xl font-bold text-textDark mb-1">GridMesh Center</h1>
+                <p class="text-textMuted text-sm font-medium">Decentralized Emergency & Substation Monitoring.</p>
+            </div>
+            
+            <div class="flex items-center gap-6 neo-panel px-6 py-3 rounded-full">
+                <div class="flex items-center gap-3">
+                    <span id="global-status-dot" class="w-3 h-3 rounded-full bg-brand-green status-dot-anim"></span>
+                    <span id="global-status-text" class="text-textDark font-bold text-sm">ONLINE</span>
+                </div>
+                <div class="h-6 w-px bg-gray-300"></div>
+                <div class="flex items-center gap-2">
+                    <i data-lucide="server" class="w-4 h-4 text-textMuted"></i>
+                    <span id="active-nodes-count" class="text-textDark font-bold text-sm">4/4 Nodes</span>
+                </div>
+                <div class="h-6 w-px bg-gray-300"></div>
+                <div class="flex items-center gap-2">
+                    <i data-lucide="clock" class="w-4 h-4 text-textMuted"></i>
+                    <span id="clock" class="text-textDark font-mono font-bold text-sm">00:00:00</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- DASHBOARD GRID -->
+        <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 overflow-y-auto pr-2 pb-4">
+            
+                        <!-- ROW 1: TOPOLOGY (Span 8) & SYSTEM STATUS (Span 4) -->
+            <section class="neo-panel lg:col-span-8 relative min-h-[400px] flex-shrink-0 animate-entrance delay-200">
+                <div class="glossy-liquid"></div>
+                <div class="absolute top-6 left-6 z-20">
+                    <h2 class="text-lg font-bold text-textDark flex items-center gap-2">
+                        Network Topology
+                    </h2>
+                </div>
+                
+                <!-- SVG Canvas -->
+                <svg id="topology-svg" class="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none" style="z-index: 1;">
+                    <path id="path-hz-ra" d="M 15 50 L 50 20" stroke="#94a3b8" stroke-width="0.5" fill="none" stroke-dasharray="2,2" class="svg-path route-a" />
+                    <path id="path-ra-base" d="M 50 20 L 85 50" stroke="#94a3b8" stroke-width="0.5" fill="none" stroke-dasharray="2,2" class="svg-path route-a" />
+                    
+                    <path id="path-hz-rb" d="M 15 50 L 50 80" stroke="#94a3b8" stroke-width="0.5" fill="none" stroke-dasharray="2,2" class="svg-path route-b" />
+                    <path id="path-rb-base" d="M 50 80 L 85 50" stroke="#94a3b8" stroke-width="0.5" fill="none" stroke-dasharray="2,2" class="svg-path route-b" />
+                    
+                    <g id="packet-container"></g>
+                </svg>
+
+                <!-- HAZARD NODE -->
+                <div class="topology-node online absolute w-32 p-3 flex flex-col items-center justify-center z-10" style="left: 15%; top: 50%; transform: translate(-50%, -50%);">
+                    <div class="w-12 h-12 rounded-full neo-inset-lite flex items-center justify-center mb-2">
+                        <i data-lucide="siren" class="w-5 h-5 text-slate-400"></i>
+                    </div>
+                    <span class="text-xs font-bold text-slate-700">HAZARD 02</span>
+                    <span class="text-[10px] text-slate-400 font-mono mt-1">ESP32 + OLED</span>
+                </div>
+
+                <!-- RELAY A -->
+                <div id="node-relay-a" class="topology-node online absolute w-32 p-3 flex flex-col items-center justify-center z-10" style="left: 50%; top: 20%; transform: translate(-50%, -50%);">
+                    <div class="w-12 h-12 rounded-full neo-inset-lite flex items-center justify-center mb-2">
+                        <i data-lucide="router" class="w-5 h-5 text-slate-400"></i>
+                    </div>
+                    <span class="text-xs font-bold text-slate-700">RELAY A</span>
+                    <span id="status-text-ra" class="text-[10px] text-slate-500 font-bold mt-1">ONLINE</span>
+                </div>
+
+                <!-- RELAY B -->
+                <div id="node-relay-b" class="topology-node online absolute w-32 p-3 flex flex-col items-center justify-center z-10" style="left: 50%; top: 80%; transform: translate(-50%, -50%);">
+                    <div class="w-12 h-12 rounded-full neo-inset-lite flex items-center justify-center mb-2">
+                        <i data-lucide="router" class="w-5 h-5 text-slate-400"></i>
+                    </div>
+                    <span class="text-xs font-bold text-slate-700">RELAY B</span>
+                    <span id="status-text-rb" class="text-[10px] text-slate-500 font-bold mt-1">ONLINE</span>
+                </div>
+
+                <!-- BASE NODE -->
+                <div class="topology-node online absolute w-32 p-3 flex flex-col items-center justify-center z-10" style="left: 85%; top: 50%; transform: translate(-50%, -50%);">
+                    <div class="w-12 h-12 rounded-full neo-inset-lite flex items-center justify-center mb-2">
+                        <i data-lucide="server" class="w-5 h-5 text-slate-400"></i>
+                    </div>
+                    <span class="text-xs font-bold text-slate-700">BASE</span>
+                    <span class="text-[10px] text-slate-400 font-mono mt-1">ESP32 CORE</span>
+                </div>
+                
+                <div id="recovery-notification" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white px-6 py-3 rounded-full shadow-neo opacity-0 pointer-events-none transition-opacity duration-300 z-30 flex items-center gap-3">
+                    <i data-lucide="refresh-cw" class="w-5 h-5 text-brand-amber animate-spin"></i>
+                    <span id="recovery-text" class="text-sm font-bold text-brand-amber">ROUTE RECOVERED</span>
+                </div>
+            </section>
+
+            <!-- SYSTEM STATUS -->
+            <section class="neo-panel lg:col-span-4 p-6 flex flex-col animate-entrance delay-500">
+                <div class="glossy-liquid"></div>
+                <h2 class="text-xs font-bold text-slate-700 flex items-center gap-2 uppercase tracking-wider mb-5">
+                    <i data-lucide="activity" class="w-3 h-3 text-slate-400"></i>
+                    System Status
+                </h2>
+                <div class="grid grid-cols-2 gap-y-6 gap-x-4 flex-1 content-center">
+                    <div class="flex flex-col">
+                        <span class="text-[10px] text-slate-400 uppercase font-bold mb-1">Active Nodes</span>
+                        <span class="text-lg font-bold text-slate-800 font-mono" id="ni-nodes">4 / 4</span>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-[10px] text-slate-400 uppercase font-bold mb-1">Available Paths</span>
+                        <span class="text-lg font-bold text-slate-800 font-mono" id="ni-paths">2</span>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-[10px] text-slate-400 uppercase font-bold mb-1">Primary Route</span>
+                        <span class="text-sm font-bold text-slate-800" id="ni-primary">Relay A</span>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-[10px] text-slate-400 uppercase font-bold mb-1">Backup Route</span>
+                        <span class="text-sm font-bold text-slate-400" id="ni-backup">Relay B</span>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-[10px] text-slate-400 uppercase font-bold mb-1">Network Status</span>
+                        <span class="text-sm font-bold text-emerald-500" id="ni-status">HEALTHY</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ROW 2: TELEMETRY (Span 8) & SIMULATION CONTROLS (Span 4) -->
+            <!-- TELEMETRY -->
+            <section class="lg:col-span-8 animate-entrance delay-300 flex flex-col">
+                <h2 class="text-lg font-bold text-textDark mb-4">Live Telemetry</h2>
+                <div class="flex flex-wrap gap-6 flex-1">
+                    <!-- Temp -->
+                    <div class="neo-panel p-5 flex-1 min-w-[220px]" id="card-temp">
+                        <div class="glossy-liquid"></div>
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="text-xs text-slate-400 font-bold uppercase tracking-wider">Temperature</div>
+                            <div class="p-2 rounded-full neo-inset-lite"><i data-lucide="thermometer" class="w-4 h-4 text-slate-400"></i></div>
+                        </div>
+                        <div class="font-mono text-3xl font-bold text-slate-800 mb-2" id="val-temp">31.2 °C</div>
+                        <div class="text-xs font-bold text-emerald-500" id="stat-temp">NORMAL</div>
+                    </div>
+                    <!-- Humidity -->
+                    <div class="neo-panel p-5 flex-1 min-w-[220px]">
+                        <div class="glossy-liquid"></div>
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="text-xs text-slate-400 font-bold uppercase tracking-wider">Humidity</div>
+                            <div class="p-2 rounded-full neo-inset-lite"><i data-lucide="droplets" class="w-4 h-4 text-slate-400"></i></div>
+                        </div>
+                        <div class="font-mono text-3xl font-bold text-slate-800 mb-2" id="val-hum">64 %</div>
+                        <div class="text-xs font-bold text-emerald-500" id="stat-hum">NORMAL</div>
+                    </div>
+                    <!-- Water -->
+                    <div class="neo-panel p-5 flex-1 min-w-[220px]" id="card-water">
+                        <div class="glossy-liquid"></div>
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="text-xs text-slate-400 font-bold uppercase tracking-wider">Water Level</div>
+                            <div class="p-2 rounded-full neo-inset-lite"><i data-lucide="waves" class="w-4 h-4 text-slate-400"></i></div>
+                        </div>
+                        <div class="font-mono text-xl font-bold text-emerald-500 mb-2" id="val-water">SAFE</div>
+                        <div class="text-xs text-slate-400 uppercase font-bold" id="stat-water">No Flood Detected</div>
+                    </div>
+                    <!-- Gas -->
+                    <div class="neo-panel p-5 flex-1 min-w-[220px]" id="card-gas">
+                        <div class="glossy-liquid"></div>
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="text-xs text-slate-400 font-bold uppercase tracking-wider">Gas / Smoke</div>
+                            <div class="p-2 rounded-full neo-inset-lite"><i data-lucide="cloud-fog" class="w-4 h-4 text-slate-400"></i></div>
+                        </div>
+                        <div class="font-mono text-xl font-bold text-emerald-500 mb-2" id="val-gas">SAFE</div>
+                        <div class="text-xs text-slate-400 uppercase font-bold" id="stat-gas">NORMAL</div>
+                    </div>
+                    <!-- Flame -->
+                    <div class="neo-panel p-5 flex-1 min-w-[220px]" id="card-flame">
+                        <div class="glossy-liquid"></div>
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="text-xs text-slate-400 font-bold uppercase tracking-wider">Flame Sensor</div>
+                            <div class="p-2 rounded-full neo-inset-lite"><i data-lucide="flame" class="w-4 h-4 text-slate-400"></i></div>
+                        </div>
+                        <div class="font-mono text-xl font-bold text-emerald-500 mb-2" id="val-flame">SAFE</div>
+                        <div class="text-xs text-slate-400 uppercase font-bold" id="stat-flame">No Fire Detected</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SIMULATION CONTROLS -->
+            <section class="neo-panel lg:col-span-4 p-6 flex flex-col animate-entrance delay-600 mt-11">
+                <div class="glossy-liquid"></div>
+                <h2 class="text-sm font-bold text-textDark mb-4">Simulation Controls</h2>
+                <div class="grid grid-cols-2 gap-3 relative z-10 flex-1 content-center">
+                    <button onclick="simulateEmergency('FIRE')" class="neo-button py-2 px-3 text-xs text-slate-600">Trigger Fire</button>
+                    <button onclick="simulateEmergency('FLOOD')" class="neo-button py-2 px-3 text-xs text-slate-600">Trigger Flood</button>
+                    <button onclick="simulateEmergency('GAS')" class="neo-button py-2 px-3 text-xs text-slate-600">Trigger Gas</button>
+                    <button id="btn-toggle-a" onclick="toggleRelay('A')" class="neo-button py-2 px-3 text-xs text-slate-600">Disable Relay A</button>
+                    
+                    <button onclick="resetNetwork()" class="neo-button py-2 px-3 text-xs col-span-2 text-slate-800 font-bold">Reset Network</button>
+                </div>
+            </section>
+
+            <!-- ROW 3: EMERGENCY (Span 6) & LOGS (Span 6) -->
+            <!-- EMERGENCY PANEL -->
+            <section id="emergency-panel" class="neo-panel lg:col-span-6 p-6 flex flex-col justify-center h-[280px] border-2 border-transparent animate-entrance delay-400">
+                <div class="glossy-liquid"></div>
+                <div class="flex items-start justify-between mb-4">
+                    <h2 class="text-sm font-bold text-textDark uppercase">Emergency Status</h2>
+                    <span id="em-badge" class="px-3 py-1 text-[10px] font-bold bg-green-100 text-brand-green rounded-full shadow-sm">NORMAL</span>
+                </div>
+                
+                <div id="em-content-normal" class="text-center py-4 flex-1 flex flex-col justify-center items-center">
+                    <div class="inline-flex p-4 rounded-full neo-inset-lite mb-4 text-emerald-500">
+                        <i data-lucide="check-circle" class="w-8 h-8"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-emerald-500 mb-1">SYSTEM NORMAL</h3>
+                    <p class="text-xs text-slate-400">No Active Emergencies</p>
+                </div>
+
+                <div id="em-content-alert" class="hidden flex-col gap-3 mt-2 relative z-10 flex-1 overflow-y-auto">
+                    <h3 class="text-xl font-extrabold text-red-500 mb-2" id="em-title">CRITICAL EMERGENCY</h3>
+                    <div class="neo-inset-lite p-4 rounded-xl flex flex-col gap-2 text-xs font-mono">
+                        <div class="flex justify-between"><span class="text-slate-400">Source:</span><span class="text-slate-800 font-bold">HAZARD NODE 02</span></div>
+                        <div class="flex justify-between"><span class="text-slate-400">Priority:</span><span class="text-red-500 font-bold">P0</span></div>
+                        <div class="flex justify-between"><span class="text-slate-400">Event:</span><span class="text-slate-800 font-bold" id="em-event-text">FIRE DETECTED</span></div>
+                        <div class="flex justify-between"><span class="text-slate-400">Route:</span><span class="text-slate-800 font-bold" id="em-route-text">HZ → RA → BASE</span></div>
+                        <div class="flex justify-between"><span class="text-slate-400">ACK:</span><span class="text-emerald-500 font-bold">CONFIRMED</span></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SYSTEM LOGS -->
+            <section class="neo-panel lg:col-span-6 flex flex-col h-[280px] animate-entrance delay-600">
+                <div class="glossy-liquid"></div>
+                <div class="p-4 border-b border-gray-100 flex justify-between items-center relative z-10 bg-gray-50/50">
+                    <h2 class="text-xs font-bold text-slate-700 flex items-center gap-2 uppercase tracking-wider">
+                        <i data-lucide="terminal" class="w-3 h-3 text-slate-400"></i>
+                        System Logs
+                    </h2>
+                </div>
+                <div class="p-4 flex-1 overflow-y-auto font-mono text-[10px] space-y-3 relative z-10" id="event-log">
+                    <!-- Logs -->
+                </div>
+            </section>
+        </div>
+    </main>
+
+
+
+    <!-- External JS -->
+    <script src="js/main.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = "https://YOUR_PROJECT_ID.supabase.co";
+  const SUPABASE_KEY = "YOUR_ANON_KEY";
+  const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  supabase.channel("public:sensor_data").on("postgres_changes", { event: "INSERT", schema: "public", table: "sensor_data" }, payload => {
+    const data = payload.new;
+    if (window.updateSensor) {
+        window.updateSensor("temp", data.temperature + " °C", "NORMAL", false);
+        window.updateSensor("hum", data.humidity + " %", "NORMAL", false);
+    }
+    if(data.flame === 1 && window.simulateEmergency) {
+        window.simulateEmergency("FIRE");
+    }
+  }).subscribe();
+</script>
+</body>
+</html>
