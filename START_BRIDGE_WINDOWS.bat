@@ -1,0 +1,6 @@
+@echo off
+echo Installing requirements...
+call npm install
+echo Starting ESP32 Bridge...
+node bridge.js
+pause
