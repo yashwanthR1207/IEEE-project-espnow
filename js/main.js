@@ -1,5 +1,4 @@
 // Connect to the Node.js Server via WebSocket
-const socket = io();
 
 const state = {
     network: { relayA: 'online', relayB: 'online', activeRoute: 'A' },
@@ -12,16 +11,13 @@ const packetContainer = document.getElementById('packet-container');
 const eventLog = document.getElementById('event-log');
 
 // Socket Events
-socket.on('connect', () => {
     console.log('Connected to Server');
 });
 
-socket.on('log', (data) => {
     addLog(data.message, data.type);
 });
 
 // Real-time telemetry from ESP32 Base Node
-socket.on('telemetry', (data) => {
     // Example data: { node: "HZ02", temp: 35.2, hum: 60, event: "NONE" }
     if(data.node === "HZ02") {
         if(data.temp) document.getElementById('val-temp').textContent = `${data.temp} °C`;
@@ -131,7 +127,6 @@ window.simulateEmergency = function(type) {
     state.emergency.active = true; state.emergency.type = type;
     
     // Optional: send test command back to server/ESP32
-    socket.emit('control_command', `SIMULATE_${type}`);
 
     const panel = document.getElementById('emergency-panel');
     panel.classList.add('panel-emergency');
@@ -160,7 +155,7 @@ window.simulateEmergency = function(type) {
     startEmergencyPackets();
 }
 
-function updateSensor(id, val, stat, isAlert) {
+window.updateSensor = function(id, val, stat, isAlert) {
     const valEl = document.getElementById(`val-${id}`);
     const statEl = document.getElementById(`stat-${id}`);
     
@@ -266,7 +261,6 @@ window.resetNetwork = function() {
     resetSensors();
     
     // Tell the server we reset
-    socket.emit('control_command', 'RESET_NETWORK');
     
     const panel = document.getElementById('emergency-panel');
     panel.classList.remove('panel-emergency');
